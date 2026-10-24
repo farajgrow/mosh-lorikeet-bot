@@ -1,0 +1,27 @@
+{
+  "id": "consult_reschedule",
+  "name": "Reschedule a consult",
+  "summary": "Move a doctor follow-up or psychologist session to a new time, applying the late-change rule.",
+  "riskLevel": "medium",
+  "triggers": ["reschedule my appointment", "move my consult", "change my follow-up", "can't make my session"],
+  "sources": [
+    { "title": "What happens if I miss my appointment?", "url": "https://support.getmosh.com.au/mosh/missing-an-appointment" }
+  ],
+  "parameters": { "lateChangeHours": 24, "lateChangeFeePercent": 50, "minLeadHours": 2, "maxDaysAhead": 30 },
+  "steps": [
+    { "id": "CR-1", "title": "Verify identity", "instruction": "Verify the patient with email and date of birth." },
+    { "id": "CR-2", "title": "Find the consult", "instruction": "Call get_consults. Confirm which appointment if there is more than one." },
+    { "id": "CR-3", "title": "Offer times", "instruction": "Call get_available_slots and offer two or three options. Do not invent times." },
+    { "id": "CR-4", "title": "Check late-change rule", "instruction": "Psychologist sessions changed with less than 24 hours' notice incur a 50% fee. Tell the patient before rescheduling. The system will send late changes to the support team for approval (they may waive the fee)." },
+    { "id": "CR-5", "title": "Reschedule and confirm", "instruction": "Call reschedule_consult with the chosen slot and confirm the new date and time." }
+  ],
+  "eligibility": [
+    { "id": "CR-E1", "rule": "Psychologist sessions changed within 24 hours incur a 50% fee.", "assumed": false },
+    { "id": "CR-E2", "rule": "Doctor follow-ups can be moved free of charge.", "assumed": true },
+    { "id": "CR-E3", "rule": "New time must be at least 2 hours away and within 30 days.", "assumed": true }
+  ],
+  "escalation": [
+    { "id": "CR-X1", "when": "Late change (within 24 hours) of a psychologist session", "then": "Action is routed to the support approval queue automatically" }
+  ],
+  "tools": ["verify_patient", "get_patient_overview", "get_consults", "get_available_slots", "reschedule_consult"]
+}

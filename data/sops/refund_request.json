@@ -1,0 +1,28 @@
+{
+  "id": "refund_request",
+  "name": "Refund request",
+  "summary": "Check refund eligibility against policy. Small eligible refunds are automatic; everything else goes to a human with the agent's reasoning.",
+  "riskLevel": "high",
+  "triggers": ["refund me", "I want my money back", "charged by mistake", "refund my last order"],
+  "sources": [
+    { "title": "What is your refund policy?", "url": "https://support.getmosh.com.au/mosh/what-is-your-refund-policy" },
+    { "title": "Mosh Terms & Conditions", "url": "https://www.getmosh.com.au/terms" }
+  ],
+  "parameters": { "autoRefundLimitCents": 5000, "refundWindowDays": 30 },
+  "steps": [
+    { "id": "RF-1", "title": "Verify identity", "instruction": "Verify the patient with email and date of birth." },
+    { "id": "RF-2", "title": "Find the payment", "instruction": "Call get_payments and get_orders. Confirm which charge the patient means." },
+    { "id": "RF-3", "title": "Check policy", "instruction": "A refund is within policy when the charge is within 30 days and the related order has not been processed by the pharmacy (status scheduled or on_hold). Once an order is processing, dispatched or delivered, it is not refundable under policy unless there is a fault (damaged, missing, wrong item, pricing error)." },
+    { "id": "RF-4", "title": "Request the refund", "instruction": "Call issue_refund. The system decides: within policy and at or under $50 is refunded immediately; anything else is sent to the support team for approval with your reasoning. Never promise an outcome that is pending approval." },
+    { "id": "RF-5", "title": "Explain clearly", "instruction": "If refunded: confirm amount and 3-5 business days to appear. If pending: say a team member will review it, usually within 1 business day. If clearly outside policy with no fault: explain why kindly, and only submit for review if the patient asks for an exception." }
+  ],
+  "eligibility": [
+    { "id": "RF-E1", "rule": "No refund once an order is processing with the pharmacy (unless fault).", "assumed": false },
+    { "id": "RF-E2", "rule": "Refund window is 30 days from the charge.", "assumed": true },
+    { "id": "RF-E3", "rule": "Automatic refunds limited to $50 per request; larger refunds need human approval.", "assumed": true }
+  ],
+  "escalation": [
+    { "id": "RF-X1", "when": "Amount over $50, outside window, order already processed, or patient requests an exception", "then": "Support approval queue (automatic via issue_refund)" }
+  ],
+  "tools": ["verify_patient", "get_patient_overview", "get_orders", "get_payments", "issue_refund"]
+}

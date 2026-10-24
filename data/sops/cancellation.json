@@ -1,0 +1,30 @@
+{
+  "id": "cancellation",
+  "name": "Cancel a subscription",
+  "summary": "Confirm intent, offer a pause once as an alternative, then cancel or route for approval.",
+  "riskLevel": "high",
+  "triggers": ["cancel my subscription", "stop my treatment plan", "I don't want this anymore", "unsubscribe"],
+  "sources": [
+    { "title": "How do I cancel my subscription?", "url": "https://support.getmosh.com.au/mosh/how-do-i-cancel-my-subscription" },
+    { "title": "Mosh Terms & Conditions (Commit & Save)", "url": "https://www.getmosh.com.au/terms" }
+  ],
+  "parameters": {},
+  "steps": [
+    { "id": "CN-1", "title": "Verify identity", "instruction": "Verify the patient with email and date of birth." },
+    { "id": "CN-2", "title": "Identify the subscription", "instruction": "Call get_patient_overview. If several programs are active, ask which one." },
+    { "id": "CN-3", "title": "Confirm intent and ask why", "instruction": "Confirm they want to cancel and briefly ask the reason. If the reason is side effects or a health concern, the clinical safety rule applies: escalate to the clinician queue as well." },
+    { "id": "CN-4", "title": "Offer a pause once", "instruction": "Call record_retention_offer, then offer to pause instead (up to 90 days). Offer only once. If they decline, proceed." },
+    { "id": "CN-5", "title": "Cancel", "instruction": "Call cancel_subscription. Standard plans cancel immediately. Commit & Save plans have a termination fee and go to the support team for approval." },
+    { "id": "CN-6", "title": "Confirm", "instruction": "Confirm the outcome. Note that orders already processing with the pharmacy will still be delivered." }
+  ],
+  "eligibility": [
+    { "id": "CN-E1", "rule": "Cancelling does not cancel orders already processing or dispatched.", "assumed": false },
+    { "id": "CN-E2", "rule": "Commit & Save plans have a termination fee; cancellation needs approval.", "assumed": false },
+    { "id": "CN-E3", "rule": "Pause must be offered once before cancelling (enforced by the system).", "assumed": true }
+  ],
+  "escalation": [
+    { "id": "CN-X1", "when": "Commit & Save plan", "then": "Support approval queue (automatic via cancel_subscription)" },
+    { "id": "CN-X2", "when": "Cancelling due to side effects or health concerns", "then": "escalate_to_clinician" }
+  ],
+  "tools": ["verify_patient", "get_patient_overview", "record_retention_offer", "pause_subscription", "cancel_subscription", "escalate_to_clinician"]
+}

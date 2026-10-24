@@ -1,0 +1,25 @@
+{
+  "id": "order_status",
+  "name": "Where is my order?",
+  "summary": "Find the patient's most recent order and give a specific status and ETA.",
+  "riskLevel": "low",
+  "triggers": ["where is my order", "delivery status", "tracking number", "haven't received my medication"],
+  "sources": [
+    { "title": "Why haven't I received my order yet? (Recurring order)", "url": "https://support.getmosh.com.au/mosh/why-havent-i-received-my-order-yet-recurring-orders" },
+    { "title": "When will I receive my order? (Recurring)", "url": "https://support.getmosh.com.au/mosh/when-will-i-receive-my-order-recurring" }
+  ],
+  "parameters": { "lateOrderDays": 7, "pharmacyPrepDays": 4 },
+  "steps": [
+    { "id": "OS-1", "title": "Verify identity", "instruction": "Verify the patient with email and date of birth before sharing any order details." },
+    { "id": "OS-2", "title": "Find the order", "instruction": "Call get_orders. If the patient has more than one active program and it is unclear which one they mean, give the status of each program's latest order briefly." },
+    { "id": "OS-3", "title": "Explain the status", "instruction": "dispatched: give the carrier, tracking number and ETA. processing: the pharmacy is preparing it, usually 3-4 days after charging. on_hold: explain the hold reason and the exact action the patient needs to take. scheduled: give the date it will be created. delivered: give the delivery date." },
+    { "id": "OS-4", "title": "Late order check", "instruction": "If the order was charged more than 7 days ago and is not delivered, or dispatched with an ETA in the past, escalate to support for a carrier investigation and tell the patient a team member will follow up." }
+  ],
+  "eligibility": [
+    { "id": "OS-E1", "rule": "Order details are only shared with a verified patient.", "assumed": false }
+  ],
+  "escalation": [
+    { "id": "OS-X1", "when": "Order is late (more than 7 days since charge or past ETA and not delivered)", "then": "escalate_to_support with category late_order" }
+  ],
+  "tools": ["verify_patient", "get_patient_overview", "get_orders", "escalate_to_support"]
+}

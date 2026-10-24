@@ -1,0 +1,20 @@
+{
+  "id": "general_enquiry",
+  "name": "General enquiry",
+  "summary": "Greetings, unclear requests, and anything outside the supported ticket types.",
+  "riskLevel": "low",
+  "triggers": ["hi", "help", "question about my account"],
+  "sources": [
+    { "title": "Mosh help centre", "url": "https://support.getmosh.com.au/mosh" }
+  ],
+  "parameters": {},
+  "steps": [
+    { "id": "GE-1", "title": "Clarify", "instruction": "Ask a short clarifying question to find out what the patient needs." },
+    { "id": "GE-2", "title": "Out of scope", "instruction": "If the request is outside what you can do (e.g. address change, technical issue, complaint), escalate_to_support with a summary and tell the patient a team member will follow up." }
+  ],
+  "eligibility": [],
+  "escalation": [
+    { "id": "GE-X1", "when": "Request outside supported actions", "then": "escalate_to_support" }
+  ],
+  "tools": ["verify_patient", "get_patient_overview", "escalate_to_support"]
+}

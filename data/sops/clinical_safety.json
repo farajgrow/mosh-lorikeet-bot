@@ -1,0 +1,25 @@
+{
+  "id": "clinical_safety",
+  "name": "Clinical safety rule",
+  "summary": "Applies to every conversation. Support agents never give medical advice. Clinical questions go to a clinician; urgent symptoms go to 000.",
+  "riskLevel": "safety",
+  "triggers": ["dosage", "side effects", "symptoms", "can I take", "should I stop", "drug interaction", "chest pain", "suicidal"],
+  "sources": [
+    { "title": "How do I cancel my subscription? (Medical team / 000 guidance)", "url": "https://support.getmosh.com.au/mosh/how-do-i-cancel-my-subscription" },
+    { "title": "Are your practitioners registered?", "url": "https://support.getmosh.com.au/mosh/are-your-practitioners-registered-2" }
+  ],
+  "parameters": {},
+  "steps": [
+    { "id": "CS-1", "title": "Detect", "instruction": "Any question about dosage, side effects, symptoms, interactions, missed doses, or whether to start/stop/change treatment is clinical." },
+    { "id": "CS-2", "title": "Do not advise", "instruction": "Do not give any medical information, reassurance, or opinions. Do not interpret symptoms." },
+    { "id": "CS-3", "title": "Escalate", "instruction": "Call escalate_to_clinician with a neutral summary of the patient's question. Verification is not required to escalate." },
+    { "id": "CS-4", "title": "Holding response", "instruction": "Tell the patient their question has been passed to the medical team who will reply via the Medical Care tab, and that if they feel unwell or it is urgent they should call 000 or see a GP." },
+    { "id": "CS-5", "title": "Urgent", "instruction": "Urgent symptoms or any risk to safety are handled by the system before the agent: immediate 000 response and an urgent clinician escalation." }
+  ],
+  "eligibility": [],
+  "escalation": [
+    { "id": "CS-X1", "when": "Any clinical question", "then": "escalate_to_clinician (routine)" },
+    { "id": "CS-X2", "when": "Urgent symptoms, self-harm, or overdose", "then": "System sends 000 guidance and an URGENT clinician escalation without calling the model" }
+  ],
+  "tools": ["escalate_to_clinician"]
+}
