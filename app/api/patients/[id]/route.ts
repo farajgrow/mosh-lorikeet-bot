@@ -1,11 +1,16 @@
 import type { PatientDetail } from "@/lib/api/contract";
 import { getDb } from "@/lib/store/db";
+import { withDb } from "@/lib/store/persist";
 import { toCard } from "@/lib/api/patients";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  return withDb(() => detail(id), { write: false });
+}
+
+function detail(id: string) {
   const card = toCard(id);
   if (!card) return Response.json({ message: "Patient not found" }, { status: 404 });
   const db = getDb();
