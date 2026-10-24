@@ -1,3 +1,6 @@
+// All demo dates (seed times, appointment slots) are in Sydney time, wherever the server runs (e.g. Vercel = UTC).
+process.env.TZ ||= "Australia/Sydney";
+
 import { buildSeed, type SeedData } from "./seed";
 import type { AuditEntry, Conversation, QueueItem } from "./types";
 

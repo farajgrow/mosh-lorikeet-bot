@@ -101,7 +101,8 @@ export interface Payment {
 
 // ---------- Support-side records ----------
 
-export type QueueKind = "support_approval" | "clinician";
+/** support = support team (approvals + handoffs), clinician = medical team. */
+export type QueueKind = "support" | "clinician";
 export type QueueStatus = "pending" | "approved" | "rejected" | "resolved";
 
 export interface QueueItem {
@@ -191,9 +192,21 @@ export interface Conversation {
   pendingNotes: string[];
   /** SOP state the code enforces, e.g. cancellation flow steps. */
   flags: {
-    pauseOfferedFor: string[];
-    cancelIntentConfirmedFor: string[];
+    /** Cancellation SOP: the pause alternative must be offered in an EARLIER turn before cancelling. */
+    retentionOffers: { subscriptionId: string; turn: number }[];
   };
-  /** Outcome labels collected during the conversation (used by evals). */
-  outcomes: string[];
+  /** SOPs selected so far (most recent last). */
+  sopHistory: string[];
+  /** Machine-readable outcome labels collected during the conversation (used by evals). */
+  outcomes: OutcomeLabel[];
 }
+
+export type OutcomeLabel =
+  | "action_executed"
+  | "action_queued"
+  | "action_blocked"
+  | "escalated_support"
+  | "escalated_clinician"
+  | "urgent_escalation"
+  | "verification_failed"
+  | "safety_filter_triggered";
