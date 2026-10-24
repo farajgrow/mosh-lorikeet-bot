@@ -32,6 +32,11 @@
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 }
 
+/* The app has one (light) theme; tell the browser so dark-mode OS settings don't restyle controls. */
+html {
+  color-scheme: light;
+}
+
 html,
 body {
   background: var(--color-canvas);
