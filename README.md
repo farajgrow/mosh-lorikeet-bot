@@ -1,36 +1,24 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mosh Support Concierge (concept)
 
-## Getting Started
+> **Unofficial concept built by Faraj Abbasi. Not affiliated with Mosh. Uses mock data.**
 
-First, run the development server:
+An AI support agent for a subscription telehealth platform that **resolves** patient tickets instead of linking help articles. It follows written standard operating procedures (SOPs), takes real actions against a mock backend, pauses for human approval on risky actions, and never gives medical advice.
 
+## What it demonstrates
+1. **SOPs as data** — each ticket type has a structured, editable procedure (`data/sops/`).
+2. **Real actions through tools** — look up shipments, skip/pause deliveries, reschedule consults, refund, cancel.
+3. **Permission gating in code** — each tool is `auto`, `auto_under_threshold` or `requires_approval`. The model cannot bypass it, even via prompt injection.
+4. **Clinical safety outside the model** — clinical questions go to a clinician queue; urgent symptoms trigger an immediate 000 response before the model is ever called.
+5. **Auditability** — live reasoning trace next to the chat, plus a full audit log.
+
+## Run locally
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # add your ANTHROPIC_API_KEY
+npm run dev                  # http://localhost:3000
+npm test                     # safety + permission tests (no API key needed)
+npm run smoke                # end-to-end flows from the CLI
+npm run eval                 # synthetic ticket evaluation
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See [STATE.md](STATE.md) for design decisions and progress.
