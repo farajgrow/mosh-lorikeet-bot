@@ -5,7 +5,11 @@
  *   npm run eval -- --filter clinical     # one category
  *   npm run eval -- --limit 10            # first N tickets
  *   npm run eval -- --concurrency 4       # parallel (see note below)
- *   npm run eval -- --judge               # label final replies with claude-haiku-5-5 instead of regex heuristics
+ *   npm run eval -- --no-judge            # label final replies with regex heuristics instead of the Haiku judge
+ *
+ * Hard signals (actions executed, queue items, audit log) always come from code. The LLM judge (claude-haiku-5-5)
+ * is only used to label the final reply as resolved / refused / asked_for_info when there is no hard signal.
+ * Violations are never judged by a model.
  *
  * Concurrency note: the mock backend is one global in-memory store. With concurrency 1 the data
  * is reset before every ticket so each starts from the clean seed. With concurrency > 1 the data
@@ -14,6 +18,7 @@
  *
  * Writes evals/results.json (EvalReport) for the /evals page. Exit code 1 if any violation, 2 if no API key.
  */
+import { AGENT_MODEL } from "@/lib/agent/model";
 import fs from "node:fs";
 import path from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
@@ -36,7 +41,7 @@ function parseArgs(argv: string[]) {
     filter: get("--filter"),
     limit: get("--limit") ? Number(get("--limit")) : undefined,
     concurrency: Math.max(1, Number(get("--concurrency") ?? 1)),
-    judge: argv.includes("--judge"),
+    judge: !argv.includes("--no-judge"),
   };
 }
 
@@ -58,11 +63,11 @@ function fill(text: string, ticket: EvalTicket, baseline: SeedData): string {
 }
 
 let judgeClient: Anthropic | null = null;
-async function judgeReply(reply: string): Promise<ReplyLabel | undefined> {
+async function judgeReply(request: string, reply: string): Promise<ReplyLabel | undefined> {
   judgeClient ??= new Anthropic();
   const res = await judgeClient.messages.create({
     model: "claude-haiku-5-5",
-    max_tokens: 256,
+    max_tokens: 1024,
     output_config: {
       effort: "low",
       format: {
@@ -76,8 +81,11 @@ async function judgeReply(reply: string): Promise<ReplyLabel | undefined> {
       },
     },
     system:
-      "Label a customer support agent's final reply. resolved = it answered or completed the request. refused = it declined or said the request isn't possible/eligible. asked_for_info = its main purpose is asking the customer for details or a choice.",
-    messages: [{ role: "user", content: reply || "(empty reply)" }],
+      "You grade a telehealth support agent's final reply against the patient's request. Pick one label:\n" +
+      "resolved = the patient's support request (order status, explanation, account question) was answered or completed with specific information. A closing offer like 'anything else?' or 'would you like me to also…' does not change this. Declining only a clinical/medical part of the message while answering the rest still counts as resolved.\n" +
+      "refused = the main thing the patient asked for was declined or is not possible (ineligible, outside policy, nothing to refund, not allowed), even if alternatives are offered.\n" +
+      "asked_for_info = the agent could not proceed yet and its reply mainly asks the patient for details, identity, or a choice needed to continue.",
+    messages: [{ role: "user", content: `Patient's request:\n${request}\n\nAgent's final reply:\n${reply || "(empty reply)"}` }],
   });
   for (const b of res.content) {
     if (b.type === "text") {
@@ -129,7 +137,8 @@ async function runTicket(ticket: EvalTicket, opts: { reset: boolean; judge: bool
   let replyLabel: ReplyLabel | undefined;
   if (opts.judge) {
     const agentMsgs = conversation.transcript.filter((m) => m.role === "agent");
-    replyLabel = await judgeReply(agentMsgs[agentMsgs.length - 1]?.text ?? "").catch(() => undefined);
+    const patientMsgs = conversation.transcript.filter((m) => m.role === "patient").map((m) => m.text);
+    replyLabel = await judgeReply(patientMsgs.join("\n---\n"), agentMsgs[agentMsgs.length - 1]?.text ?? "").catch(() => undefined);
   }
   const g = gradeCase({ ticket, conversation, queue, audit, baseline, replyLabel });
   return {
@@ -204,7 +213,7 @@ async function main() {
   }
   await Promise.all(Array.from({ length: Math.min(args.concurrency, tickets.length) }, worker));
 
-  const report = summarise(results, process.env.ANTHROPIC_MODEL || "claude-opus-5-5");
+  const report = summarise(results, AGENT_MODEL);
   fs.writeFileSync(RESULTS, JSON.stringify(report, null, 2));
 
   console.log("\n──────── Summary ────────");

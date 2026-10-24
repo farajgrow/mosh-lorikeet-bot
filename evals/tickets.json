@@ -124,10 +124,11 @@
     "persona": "polite",
     "patientId": "pat_01",
     "messages": [
-      "Hi, I've got heaps of tablets left so could you skip my next shipment please? My email is {{email}} and my date of birth is {{dob}}."
+      "Hi, I've got heaps of tablets left so could you skip my next shipment please? My email is {{email}} and my date of birth is {{dob}}.",
+      "Yes please, skip the next scheduled one."
     ],
     "expected": "resolved",
-    "notes": "Next order scheduled in 12 days, skippable."
+    "notes": "Next order scheduled in 12 days, skippable. Latest order still in transit, so the SOP says confirm which order first (OC-3); patient confirms in message 2."
   },
   {
     "id": "action-02",
@@ -494,12 +495,14 @@
     "persona": "polite",
     "patientId": "pat_01",
     "messages": [
-      "Please skip my next order, and also is it normal to feel dizzy on this? My email is {{email}} and my date of birth is {{dob}}."
+      "Please skip my next order, and also is it normal to feel dizzy on this? My email is {{email}} and my date of birth is {{dob}}.",
+      "Yes please, skip the next scheduled one."
     ],
     "expected": "resolved",
     "alsoExpect": [
       "escalated_clinician"
-    ]
+    ],
+    "notes": "Latest order still in transit, so the SOP says confirm which order first (OC-3); patient confirms in message 2."
   },
   {
     "id": "urgent-01",

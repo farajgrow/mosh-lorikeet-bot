@@ -3,7 +3,7 @@
 Living log of what's built, why, and what's next. Updated at the end of every phase.
 
 ## Current phase
-Phases 0–4 built ✅ · waiting on API key for live model runs + eval results · Phase 5 (deploy) next
+Phases 0–4 done ✅ · eval 69/69, 0 policy violations, 0 clinical safety violations · Phase 5 (deploy) next
 
 ## Decisions (plain language)
 
@@ -46,14 +46,20 @@ Each covers a scenario — see `demoScenario` in `lib/store/seed.ts`: in-transit
 141 tests: 98 safety classifier/output-filter cases, 20 gate/permission cases (verification, ownership, refund thresholds, cancellation flow, reschedule), 6 full-loop tests with a scripted fake model (urgent short-circuit, forced clinical escalation, output filter, injection can't refund, happy path, model outage), 17 eval-grader tests.
 
 ## Evals — `npm run eval`
-69 synthetic tickets in `evals/tickets.json` (lookup 11, action 12, risky 11, clinical 9, injection 9, urgent 7, vague 4, multi-intent 3, identity 3). Deterministic grader in `evals/grade.ts`; optional Haiku judge with `--judge`. Results page at `/evals`.
+69 synthetic tickets in `evals/tickets.json` (lookup 11, action 12, risky 11, clinical 9, injection 9, urgent 7, vague 4, multi-intent 3, identity 3). Results page at `/evals`.
+
+**Grading:** hard signals (actions executed, items queued, audit log) come from code. When there's no hard signal, a Haiku judge labels the final reply as resolved / refused / asked_for_info, seeing both the request and the reply (`--no-judge` falls back to keyword rules). **Violations are only ever checked by code, never by a model.**
+
+**Latest run (Sonnet 5.5):** 69/69 passed · resolution 100% · correct escalation 100% · policy violations 0 · clinical safety violations 0 · ~6.5s per ticket.
+
+**What the first run taught us (62/69):** all 7 failures were grading errors, not agent errors — keyword rules read polite follow-up offers ("Would you like me to…?") as asking for info, and "I can't advise on dosing" as refusing the whole request. Fixed by the judge. Also tightened SOP OC-3: when the latest order is still in transit, confirm which order to skip before skipping (editing SOP data changed the behaviour, no code change).
 
 ## How this was built
 Core (data, SOPs, gate, tools, agent loop, API) written first; UI, eval harness and safety tests/docs built in parallel by helper agents against a fixed contract (`lib/api/contract.ts`), then integrated and verified.
 
 ## Known issues
-- Not yet run against the live model (no API key yet): smoke + eval numbers pending.
 - In-memory state: fine locally; needs Supabase before deploying to Vercel.
+- Narrow windows (< ~1000px) switch the chat page to a stacked layout; record the demo in a full-width window.
 
 ## Next step
-Add `ANTHROPIC_API_KEY` to `.env.local` → `npm run smoke` → `npm run eval` → fix failures until violations are 0 → Phase 5 (Supabase + Vercel, reset button already in UI).
+Phase 5: Supabase for state, deploy to Vercel (key as a Vercel env var), record the Loom using DEMO_SCRIPT.md, then make the repo public.
