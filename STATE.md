@@ -3,7 +3,7 @@
 Living log of what's built, why, and what's next. Updated at the end of every phase.
 
 ## Current phase
-Phase 1 — Data & SOPs ✅
+Phases 0–4 built ✅ · waiting on API key for live model runs + eval results · Phase 5 (deploy) next
 
 ## Decisions (plain language)
 
@@ -11,13 +11,25 @@ Phase 1 — Data & SOPs ✅
 |---|---|
 | **Next.js 15 + TypeScript** | One codebase for the UI and the API routes, deploys to Vercel in one step. TypeScript catches mistakes in tool inputs and data shapes before runtime. |
 | **Claude via the official Anthropic SDK, manual tool loop** | Writing the loop myself means *my code* sees every tool call before it runs. That is where permission checks, verification and safety rules live — the model proposes, the code decides. |
-| **Model: `claude-opus-5-5` at low effort** (override with `ANTHROPIC_MODEL`) | Strongest instruction-following for a safety-sensitive healthcare flow; low effort keeps replies fast for a live demo. Switch to `claude-sonnet-5-5` if latency matters more. |
+| **Agent model: `claude-sonnet-5-5` at low effort** (override with `ANTHROPIC_MODEL`) | Good balance of speed, quality and cost for a live demo. Opus 5.5 is available for maximum care; Haiku 5.5 for cheap eval runs. Safety and permissions don't depend on the model, so a cheaper model can only make conversations worse, never unsafe. |
+| **Router model: `claude-haiku-5-5`** | Picking the SOP is a classification task — the cheapest model is enough. Its answer is constrained to a fixed list of SOP ids (structured output), so it can't invent a procedure. It also gives a second, model-based opinion on clinical/urgent content. |
+| **Considered Gemini; stayed on Claude** | Haiku 5.5 is already in the cheap tier, and one provider means one SDK, one loop, one set of behaviours to test. |
 | **Server-side refusal fallback enabled** | If the primary model declines a request for safety-classifier reasons, the API automatically retries on a fallback model in the same call, so the demo never dead-ends. |
-| **In-memory mock backend behind a `Store` interface** | Fast, zero setup, instant reset. Swappable for Redis/Postgres later without touching agent code. |
+| **In-memory mock backend (`lib/store/db.ts`)** | Fast, zero setup, instant reset. All access goes through `getDb()`. **Plan for deploy: Supabase (Postgres)** so state survives Vercel's serverless functions — a real database is also a better production story. |
 | **Zod for schemas** | Every tool input from the model is validated before it touches data — model output is treated as untrusted. |
 | **SOPs stored as JSON in `data/sops/`, validated by Zod** | Ops teams can read and edit procedures without touching code. Policy numbers (refund limit, 30-day window, 24h late-change rule) live in the SOP and the code reads them — editing the SOP changes enforcement. |
 | **Seed data generated relative to today** | An order that "dispatched yesterday" is always yesterday, so the demo never goes stale. |
 | **Order lifecycle: scheduled → on_hold → processing → dispatched → delivered** | Mirrors Mosh's help centre. "Processing" = awaiting shipment with the pharmacy, after which Mosh's terms say no refund or change. |
+| **The permission gate (`lib/permissions/gate.ts`)** | Every tool call passes 6 checks in order: known tool → valid input → verified patient → hard rules (ownership, order already dispatched…) → policy thresholds (→ human queue) → execute. It's the only code path that can change data, apart from a human approval. Prompt injection can't reach it. |
+| **Tools split into `assess()` and `execute()`** | `assess` is pure (no side effects) and returns either "not allowed + reason" or "allowed + which policy rules need a human". The gate decides. On human approval, `assess` re-runs (state may have changed) before `execute`. |
+| **Safety in three layers** | (1) Regex classifier before the model — urgent → fixed 000 reply, model never called. (2) Router model as second opinion, OR-ed in code. (3) Output filter on every reply — catches advice like "you can take two tablets" and replaces it. Plus: if clinical content was detected and the model didn't escalate, the code escalates anyway. |
+| **SOP steps enforced in code where it matters** | Cancellation: `cancel_subscription` refuses unless `record_retention_offer` ran in an *earlier* turn — the patient must actually get the chance to say no to the pause. Reschedule: only real slots from `get_available_slots` are accepted. |
+| **Per-turn context as a mid-conversation system message** | The main system prompt stays identical every request (cheap via prompt caching); the selected SOP, today's date and safety flags arrive as a system message after the patient's message. Patient text stays in the user role, so it never carries system authority. |
+| **Human approvals post templated messages** | When an operator approves, the patient's chat updates instantly with fixed wording — no model call, so it can't fail or say the wrong thing. |
+| **Live trace over Server-Sent Events** | The reasoning panel fills in step by step while the agent works, which is the centrepiece of the demo. |
+| **Thinking display "summarized"** | The model's reasoning summary appears in the trace as "Agent reasoning", so a viewer sees *why*, not just *what*. |
+| **Server-side refusal fallback** | On Sonnet/Opus the API retries a safety-classifier refusal on a fallback model inside the same call, so the demo doesn't dead-end. |
+| **All times in Sydney** | The server pins `TZ=Australia/Sydney` so seed data and appointment slots read correctly even on Vercel (UTC). |
 | **Vitest for tests** | Safety and permission rules are tested deterministically without calling the model. |
 
 ## Research → policy mapping
@@ -30,8 +42,18 @@ Phase 1 — Data & SOPs ✅
 ## Mock patients (15, fictional, @example.com)
 Each covers a scenario — see `demoScenario` in `lib/store/seed.ts`: in-transit order, processing order, already-dispatched, small refund, large refund, outside-window refund, recently cancelled, multiple programs, <24h psychologist reschedule, doctor reschedule, Commit & Save cancel, standard cancel, late order, identity mismatch, declined payment.
 
+## Tests (no API key needed) — `npm test`
+141 tests: 98 safety classifier/output-filter cases, 20 gate/permission cases (verification, ownership, refund thresholds, cancellation flow, reschedule), 6 full-loop tests with a scripted fake model (urgent short-circuit, forced clinical escalation, output filter, injection can't refund, happy path, model outage), 17 eval-grader tests.
+
+## Evals — `npm run eval`
+69 synthetic tickets in `evals/tickets.json` (lookup 11, action 12, risky 11, clinical 9, injection 9, urgent 7, vague 4, multi-intent 3, identity 3). Deterministic grader in `evals/grade.ts`; optional Haiku judge with `--judge`. Results page at `/evals`.
+
+## How this was built
+Core (data, SOPs, gate, tools, agent loop, API) written first; UI, eval harness and safety tests/docs built in parallel by helper agents against a fixed contract (`lib/api/contract.ts`), then integrated and verified.
+
 ## Known issues
-- None yet.
+- Not yet run against the live model (no API key yet): smoke + eval numbers pending.
+- In-memory state: fine locally; needs Supabase before deploying to Vercel.
 
 ## Next step
-Phase 2 — agent loop, tools, permission gate, safety classifier, tests.
+Add `ANTHROPIC_API_KEY` to `.env.local` → `npm run smoke` → `npm run eval` → fix failures until violations are 0 → Phase 5 (Supabase + Vercel, reset button already in UI).
