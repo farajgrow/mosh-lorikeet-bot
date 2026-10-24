@@ -21,7 +21,11 @@ export function buildSeed(now: Date = new Date()): SeedData {
     d.setHours(hour, 0, 0, 0);
     return d.toISOString();
   };
-  const date = (days: number) => at(days).slice(0, 10);
+  // Local calendar date (server runs in Sydney time). toISOString() would shift to UTC and be a day off.
+  const date = (days: number) => {
+    const d = new Date(at(days));
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
   const hoursFromNow = (h: number) => new Date(now.getTime() + h * 60 * 60 * 1000).toISOString();
 
   const patients: Patient[] = [];

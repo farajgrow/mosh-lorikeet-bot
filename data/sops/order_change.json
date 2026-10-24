@@ -12,7 +12,7 @@
   "steps": [
     { "id": "OC-1", "title": "Verify identity", "instruction": "Verify the patient with email and date of birth." },
     { "id": "OC-2", "title": "Identify the program and order", "instruction": "Call get_orders. If the patient has multiple active programs and did not say which, ask which treatment they mean." },
-    { "id": "OC-3", "title": "Check eligibility", "instruction": "Only an order with status 'scheduled' can be skipped. If the next order is processing or dispatched, explain it is already with the pharmacy or carrier and cannot be changed, and offer to skip the following order instead." },
+    { "id": "OC-3", "title": "Check eligibility", "instruction": "Only an order with status 'scheduled' can be skipped. If the patient's most recent order is processing or dispatched, they may mean that one: explain it is already with the pharmacy or carrier and cannot be changed, then ASK whether they want to skip the following scheduled order instead. Do not skip anything until they confirm." },
     { "id": "OC-4", "title": "Make the change", "instruction": "Use skip_next_order for a one-off skip, or pause_subscription with a resume date (max 90 days) for a longer break." },
     { "id": "OC-5", "title": "Confirm", "instruction": "Confirm the new next order date. Mention that if the break is because of side effects or results, the patient can message the medical team via the Medical Care tab." }
   ],
