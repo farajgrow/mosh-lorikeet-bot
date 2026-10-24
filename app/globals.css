@@ -1,26 +1,107 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Design tokens — a calm clinical-operations console.
+ * Cool grey canvas, white working surfaces, one deep teal accent for actions.
+ * Status colours are reserved for meaning (auto / approval / escalated / urgent / blocked / info).
+ */
+@theme {
+  --color-canvas: #f2f4f6;
+  --color-surface: #ffffff;
+  --color-ink: #17202b;
+  --color-muted: #5e6876;
+  --color-faint: #8a93a0;
+  --color-line: #dce1e7;
+  --color-accent: #24585c;
+  --color-accent-soft: #e4eeee;
+
+  --color-auto: #2f7a4f;
+  --color-auto-soft: #e5f2ea;
+  --color-approval: #a5650b;
+  --color-approval-soft: #fbf0dc;
+  --color-escalated: #6a4bb0;
+  --color-escalated-soft: #eee9f8;
+  --color-urgent: #b4232a;
+  --color-urgent-soft: #fbe6e6;
+  --color-blocked: #5b6370;
+  --color-blocked-soft: #eceef1;
+  --color-info: #2c63a8;
+  --color-info-soft: #e5eef9;
+
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "ss02";
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@keyframes trace-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.trace-in {
+  animation: trace-in 220ms ease-out both;
+}
+
+@keyframes changed-flash {
+  0% {
+    background-color: var(--color-approval-soft);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.changed-flash {
+  animation: changed-flash 2.4s ease-out both;
+}
+
+@keyframes typing {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+.typing-dot {
+  animation: typing 1.2s infinite ease-in-out;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trace-in,
+  .changed-flash,
+  .typing-dot {
+    animation: none;
+  }
 }
