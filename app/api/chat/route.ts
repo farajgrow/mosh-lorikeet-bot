@@ -4,6 +4,8 @@ import type { ChatRequest } from "@/lib/api/contract";
 import { getDb } from "@/lib/store/db";
 import { withDb } from "@/lib/store/persist";
 import { rateLimited } from "@/lib/api/rateLimit";
+import { CAP_MESSAGE, overDailyCap } from "@/lib/api/dailyCap";
+import { classifyMessage } from "@/lib/safety/classifier";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +23,9 @@ export async function POST(req: Request) {
   // Public demo: protect the API budget.
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
   if (rateLimited(ip)) return Response.json({ message: "You're sending messages quickly — please wait a minute and try again." }, { status: 429 });
+  // Site-wide daily cap. Urgent-symptom messages are exempt: their 000 reply never calls the model,
+  // so they cost nothing, and safety handling must always work.
+  if (!classifyMessage(message).urgent && (await overDailyCap())) return Response.json({ message: CAP_MESSAGE }, { status: 429 });
 
   const enc = new TextEncoder();
   const stream = new ReadableStream({
