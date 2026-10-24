@@ -15,7 +15,10 @@ Phases 0–4 done ✅ · eval 69/69, 0 policy violations, 0 clinical safety viol
 | **Router model: `claude-haiku-5-5`** | Picking the SOP is a classification task — the cheapest model is enough. Its answer is constrained to a fixed list of SOP ids (structured output), so it can't invent a procedure. It also gives a second, model-based opinion on clinical/urgent content. |
 | **Considered Gemini; stayed on Claude** | Haiku 5.5 is already in the cheap tier, and one provider means one SDK, one loop, one set of behaviours to test. |
 | **Server-side refusal fallback enabled** | If the primary model declines a request for safety-classifier reasons, the API automatically retries on a fallback model in the same call, so the demo never dead-ends. |
-| **In-memory mock backend (`lib/store/db.ts`)** | Fast, zero setup, instant reset. All access goes through `getDb()`. **Plan for deploy: Supabase (Postgres)** so state survives Vercel's serverless functions — a real database is also a better production story. |
+| **In-memory mock backend (`lib/store/db.ts`)** | Fast, zero setup, instant reset. All access goes through `getDb()`. |
+| **Deployed state: Neon Postgres via the Vercel Marketplace** | Vercel runs each request on whichever instance is free, so memory isn't shared — state must live in a database. Considered Supabase (out of free projects) and Upstash Redis (key-value, weaker story); Neon is free Postgres, one click from Vercel, sets `DATABASE_URL` automatically, and its HTTP driver suits serverless. |
+| **One versioned JSON document + optimistic locking + per-record merge** (`lib/store/persist.ts`) | Each request loads state, works on a private copy (AsyncLocalStorage), and saves only if the version hasn't moved. If it has, only the records this request changed are merged onto the latest — so an operator approval and a chat turn at the same time both survive. Table is auto-created. In production these would be proper tables; a single document keeps the demo resettable. |
+| **Public-demo hardening** | Per-IP rate limit (40 msgs / 10 min), 30 turns per conversation, 2,000-char messages, 60s function limit for chat. Real budget guard: Anthropic console spend limit. |
 | **Zod for schemas** | Every tool input from the model is validated before it touches data — model output is treated as untrusted. |
 | **SOPs stored as JSON in `data/sops/`, validated by Zod** | Ops teams can read and edit procedures without touching code. Policy numbers (refund limit, 30-day window, 24h late-change rule) live in the SOP and the code reads them — editing the SOP changes enforcement. |
 | **Seed data generated relative to today** | An order that "dispatched yesterday" is always yesterday, so the demo never goes stale. |
@@ -58,8 +61,7 @@ Each covers a scenario — see `demoScenario` in `lib/store/seed.ts`: in-transit
 Core (data, SOPs, gate, tools, agent loop, API) written first; UI, eval harness and safety tests/docs built in parallel by helper agents against a fixed contract (`lib/api/contract.ts`), then integrated and verified.
 
 ## Known issues
-- In-memory state: fine locally; needs Supabase before deploying to Vercel.
 - Narrow windows (< ~1000px) switch the chat page to a stacked layout; record the demo in a full-width window.
 
 ## Next step
-Phase 5: Supabase for state, deploy to Vercel (key as a Vercel env var), record the Loom using DEMO_SCRIPT.md, then make the repo public.
+Phase 5: import the repo on Vercel, add Neon storage + `ANTHROPIC_API_KEY`, verify the live URL, record the Loom using DEMO_SCRIPT.md, then make the repo public.

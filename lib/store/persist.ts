@@ -1,8 +1,8 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 import { requestDb, freshDb, type Db } from "./db";
 
 /**
- * Supabase persistence for the demo state.
+ * Postgres persistence for the demo state (Neon, added to the project via the Vercel Marketplace).
  *
  * Design: the whole demo state is one JSONB document in a `demo_state` row with a version number.
  * Each request loads it, runs inside its own copy (AsyncLocalStorage), and saves with an optimistic
@@ -11,19 +11,25 @@ import { requestDb, freshDb, type Db } from "./db";
  * state, so an operator approval and a chat turn running at the same time don't overwrite each other.
  *
  * For a real deployment these would be proper tables; a single document keeps the demo simple
- * and resettable. With no SUPABASE_* env vars, everything stays in memory (local dev, tests, evals).
+ * and resettable. With no DATABASE_URL, everything stays in memory (local dev, tests, evals).
  */
 
 const ROW_ID = "demo";
 type Json = Record<string, unknown>;
 type Doc = Omit<Db, "conversations"> & { conversations: Record<string, unknown> };
 
-let client: SupabaseClient | null = null;
-export const persistenceEnabled = () => Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+const dbUrl = () => process.env.DATABASE_URL || process.env.POSTGRES_URL;
+export const persistenceEnabled = () => Boolean(dbUrl());
 
-function sb(): SupabaseClient {
-  client ??= createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
-  return client;
+let sqlClient: NeonQueryFunction<false, false> | null = null;
+let schemaReady: Promise<unknown> | null = null;
+function sql() {
+  sqlClient ??= neon(dbUrl()!);
+  // Create the table on first use, so there is no manual SQL step.
+  schemaReady ??= sqlClient.query(
+    "create table if not exists demo_state (id text primary key, version integer not null, data jsonb not null, updated_at timestamptz not null default now())",
+  );
+  return { q: sqlClient, ready: schemaReady };
 }
 
 const toDoc = (db: Db): Doc => ({ ...db, conversations: Object.fromEntries(db.conversations) });
@@ -31,25 +37,23 @@ const fromDoc = (d: Doc): Db => ({ ...d, conversations: new Map(Object.entries(d
 const clone = <T>(x: T): T => structuredClone(x);
 
 async function load(): Promise<{ db: Db; version: number }> {
-  const { data, error } = await sb().from("demo_state").select("version, data").eq("id", ROW_ID).maybeSingle();
-  if (error) throw new Error(`Supabase load failed: ${error.message}`);
-  if (data) return { db: fromDoc(data.data as Doc), version: data.version as number };
+  const { q, ready } = sql();
+  await ready;
+  const rows = (await q.query("select version, data from demo_state where id = $1", [ROW_ID])) as { version: number; data: Doc }[];
+  if (rows[0]) return { db: fromDoc(rows[0].data), version: rows[0].version };
   const db = freshDb();
-  const ins = await sb().from("demo_state").insert({ id: ROW_ID, version: 1, data: toDoc(db) });
-  if (ins.error && ins.error.code !== "23505") throw new Error(`Supabase init failed: ${ins.error.message}`);
-  if (ins.error) return load(); // another request created it first
+  const inserted = (await q.query("insert into demo_state (id, version, data) values ($1, 1, $2) on conflict (id) do nothing returning version", [ROW_ID, JSON.stringify(toDoc(db))])) as unknown[];
+  if (inserted.length === 0) return load(); // another request created it first
   return { db, version: 1 };
 }
 
 async function save(db: Db, version: number): Promise<boolean> {
-  const { data, error } = await sb()
-    .from("demo_state")
-    .update({ version: version + 1, data: toDoc(db), updated_at: new Date().toISOString() })
-    .eq("id", ROW_ID)
-    .eq("version", version)
-    .select("version");
-  if (error) throw new Error(`Supabase save failed: ${error.message}`);
-  return (data?.length ?? 0) > 0;
+  const { q } = sql();
+  const rows = (await q.query(
+    "update demo_state set version = version + 1, data = $1, updated_at = now() where id = $2 and version = $3 returning version",
+    [JSON.stringify(toDoc(db)), ROW_ID, version],
+  )) as unknown[];
+  return rows.length > 0;
 }
 
 /** Collections merged record-by-record (by id). */
