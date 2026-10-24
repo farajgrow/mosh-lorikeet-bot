@@ -2,6 +2,8 @@
 
 > **Unofficial concept built by Faraj Abbasi. Not affiliated with Mosh. Uses mock data.**
 
+**Live demo:** https://mosh-lorikeet-bot.vercel.app · **Eval results:** https://mosh-lorikeet-bot.vercel.app/evals (69/69, zero policy and clinical-safety violations)
+
 An AI support agent for a subscription telehealth platform that **resolves** patient tickets instead of linking help articles. It follows written standard operating procedures (SOPs), takes real actions against a mock backend, pauses for human approval on risky actions, and never gives medical advice.
 
 ## What it demonstrates
@@ -19,6 +21,10 @@ npm run dev                  # http://localhost:3000
 npm test                     # safety + permission tests (no API key needed)
 npm run smoke                # end-to-end flows from the CLI
 npm run eval                 # synthetic ticket evaluation
+npm run db:check             # Postgres persistence check (needs DATABASE_URL)
 ```
 
-See [STATE.md](STATE.md) for design decisions and progress.
+## Stack
+Next.js 15 · TypeScript · Claude (Sonnet 5.5 agent, Haiku 5.5 router) via the Anthropic SDK · Zod · Vitest · Neon Postgres · Vercel
+
+See [STATE.md](STATE.md) for design decisions, [DEPLOYMENT_NOTES.md](DEPLOYMENT_NOTES.md) for how this would roll out at a real telehealth company, and [DEMO_SCRIPT.md](DEMO_SCRIPT.md) for the 2-minute walkthrough.

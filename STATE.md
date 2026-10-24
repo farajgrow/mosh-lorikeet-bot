@@ -3,7 +3,7 @@
 Living log of what's built, why, and what's next. Updated at the end of every phase.
 
 ## Current phase
-Phases 0–4 done ✅ · eval 69/69, 0 policy violations, 0 clinical safety violations · Phase 5 (deploy) next
+All phases done ✅ · live at https://mosh-lorikeet-bot.vercel.app · eval 69/69, 0 policy violations, 0 clinical safety violations
 
 ## Decisions (plain language)
 
@@ -64,4 +64,7 @@ Core (data, SOPs, gate, tools, agent loop, API) written first; UI, eval harness 
 - Narrow windows (< ~1000px) switch the chat page to a stacked layout; record the demo in a full-width window.
 
 ## Next step
-Phase 5: import the repo on Vercel, add Neon storage + `ANTHROPIC_API_KEY`, verify the live URL, record the Loom using DEMO_SCRIPT.md, then make the repo public.
+Record the Loom using DEMO_SCRIPT.md (click **Reset demo data** first), set an Anthropic spend limit, then make the repo public.
+
+## Deployment
+Vercel (auto-deploys on push to `main`) + Neon Postgres (Sydney). Verified live: refund queued → approved → patient chat updated; urgent message → 000 reply + urgent flag; ~9s per agent turn. Note: local dev with `DATABASE_URL` set shares the same database as production — reset affects both.
