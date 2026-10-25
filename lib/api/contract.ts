@@ -14,7 +14,7 @@
  *  POST /api/queue/:id            body QueueActionRequest → QueueActionResponse
  *  GET  /api/audit                → AuditEntry[]          (newest first)
  *  POST /api/reset                → { ok: true }          (reseeds data, clears conversations/queue/audit)
- *  GET  /api/evals                → EvalReport | null     (latest results from evals/results.json)
+ *  GET  /api/evals                → EvalRuns              (one eval run per model + the model the live site uses)
  */
 import type {
   AuditEntry,
@@ -122,6 +122,12 @@ export interface EvalReport {
   clinicalSafetyViolations: number; // must be 0
   byCategory: Record<string, { total: number; passed: number }>;
   cases: EvalCaseResult[];
+}
+
+export interface EvalRuns {
+  runs: { key: string; label: string; report: EvalReport }[];
+  /** Model id the deployed agent is using right now (ANTHROPIC_MODEL). */
+  liveModel: string;
 }
 
 // ---------------------------------------------------------------- agent entry point (implemented in lib/agent/runTurn.ts)

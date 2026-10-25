@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { EvalCaseResult, EvalReport, TranscriptMessage } from "@/lib/api/contract";
+import type { EvalCaseResult, EvalRuns, TranscriptMessage } from "@/lib/api/contract";
 import { Badge } from "@/app/components/Badge";
 import { RichText } from "@/app/components/RichText";
 import { TraceTimeline } from "@/app/components/TraceTimeline";
@@ -126,24 +126,32 @@ function CaseCard({ c }: { c: EvalCaseResult }) {
 // ---------------------------------------------------------------- page
 
 export default function EvalsPage() {
-  const [report, setReport] = useState<EvalReport | null | undefined>(undefined);
+  const [data, setData] = useState<EvalRuns | null | undefined>(undefined);
+  const [runKey, setRunKey] = useState<string | null>(null);
   const [view, setView] = useState<"all" | "failures">("all");
   const [category, setCategory] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/evals")
       .then((r) => r.json())
-      .then(setReport)
-      .catch(() => setReport(null));
+      .then((d: EvalRuns) => {
+        setData(d?.runs?.length ? d : null);
+        // Open on the model the live site is running, if we have a run for it.
+        const live = d?.runs?.find((r) => r.report.model === d.liveModel);
+        setRunKey((live ?? d?.runs?.[0])?.key ?? null);
+      })
+      .catch(() => setData(null));
   }, []);
+
+  const report = data?.runs.find((r) => r.key === runKey)?.report ?? data?.runs[0]?.report ?? (data === undefined ? undefined : null);
 
   const shown = useMemo(() => {
     if (!report) return [];
     return report.cases.filter((c) => (view === "all" || !c.passed) && (!category || c.ticket.category === category));
   }, [report, view, category]);
 
-  if (report === undefined) return <div className="p-8 text-sm text-muted">Loading eval results…</div>;
-  if (report === null)
+  if (data === undefined || report === undefined) return <div className="p-8 text-sm text-muted">Loading eval results…</div>;
+  if (!data || !report)
     return (
       <div className="mx-auto max-w-3xl p-8">
         <h1 className="text-2xl font-semibold text-ink">Evaluation results</h1>
@@ -158,11 +166,36 @@ export default function EvalsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-8 sm:py-8">
+      {data.runs.length > 1 && (
+        <nav className="flex flex-wrap items-center gap-2" aria-label="Model">
+          {data.runs.map((r) => {
+            const active = r.key === runKey;
+            const live = r.report.model === data.liveModel;
+            return (
+              <button
+                key={r.key}
+                onClick={() => setRunKey(r.key)}
+                className={`flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm ${
+                  active ? "border-accent bg-accent-soft text-accent" : "border-line bg-surface text-muted hover:text-ink"
+                }`}
+              >
+                <span className="font-medium">{r.label}</span>
+                <span className="tabular-nums text-xs opacity-80">
+                  {r.report.passed}/{r.report.total}
+                </span>
+                {live && <span className="rounded-full bg-auto-soft px-2 py-0.5 text-[11px] font-medium text-auto">Live site</span>}
+              </button>
+            );
+          })}
+          <span className="text-xs text-faint">Same {report.total} tickets, same grader. Only the agent model changes.</span>
+        </nav>
+      )}
+
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-ink">Evaluation results</h1>
           <p className="mt-1 text-sm text-muted">
-            {report.total} synthetic patient tickets run against the live agent · model <span className="font-mono text-[13px]">{report.model}</span> ·{" "}
+            {report.total} synthetic patient tickets run against the agent · model <span className="font-mono text-[13px]">{report.model}</span> ·{" "}
             {new Date(report.runAt).toLocaleString("en-AU", { timeZone: "Australia/Sydney", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })}
           </p>
         </div>

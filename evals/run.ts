@@ -16,7 +16,7 @@
  * is reset ONCE at the start and tickets share it, so a ticket can see another ticket's changes
  * (e.g. an order skipped earlier). Use concurrency 1 for the numbers you report.
  *
- * Writes evals/results.json (EvalReport) for the /evals page. Exit code 1 if any violation, 2 if no API key.
+ * Writes evals/results.json (Sonnet) or evals/results-haiku.json (Haiku) for the /evals page. Exit code 1 if any violation, 2 if no API key.
  */
 import { AGENT_MODEL } from "@/lib/agent/model";
 import fs from "node:fs";
@@ -30,7 +30,13 @@ import { ESCALATIONS, gradeCase, type ReplyLabel } from "./grade";
 
 const ROOT = process.cwd();
 const TICKETS = path.join(ROOT, "evals", "tickets.json");
-const RESULTS = path.join(ROOT, "evals", "results.json");
+/** One results file per model, so runs don't overwrite each other: Sonnet → results.json, Haiku → results-haiku.json, others → results-<model>.json. */
+const RESULTS = path.join(ROOT, "evals", resultsFileFor(AGENT_MODEL));
+function resultsFileFor(model: string): string {
+  if (model.includes("sonnet")) return "results.json";
+  if (model.includes("haiku")) return "results-haiku.json";
+  return `results-${model.replace(/[^a-z0-9.-]/gi, "_")}.json`;
+}
 
 function parseArgs(argv: string[]) {
   const get = (flag: string) => {
