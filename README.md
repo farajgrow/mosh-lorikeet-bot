@@ -25,6 +25,6 @@ npm run db:check             # Postgres persistence check (needs DATABASE_URL)
 ```
 
 ## Stack
-Next.js 15 · TypeScript · Claude (Sonnet 5.5 agent, Haiku 5.5 router) via the Anthropic SDK · Zod · Vitest · Neon Postgres · Vercel
+Next.js 15 · TypeScript · Claude (Sonnet 5.5 or Haiku 5.5 agent, Haiku 5.5 router) via the Anthropic SDK · Zod · Vitest · Neon Postgres · Vercel
 
 See [STATE.md](STATE.md) for design decisions, [DEPLOYMENT_NOTES.md](DEPLOYMENT_NOTES.md) for how this would roll out at a real telehealth company, and [DEMO_SCRIPT.md](DEMO_SCRIPT.md) for the 2-minute walkthrough.
